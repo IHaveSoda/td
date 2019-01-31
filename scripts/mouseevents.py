@@ -3,70 +3,57 @@ from pygame.mouse import get_pos
 import TDObjects
 from gui import _elements
 
+offsets = []
+holding_active = False
+
 def check(app):
-	if app.selected is None:
-		for event in app.events:
-			if event.type == pgc.QUIT: return "break loop"
+	global offsets
+	global holding_active
 
-			mousepos = get_pos()
-			undermouse = None
+	mouse = get_pos()
+	for event in app.events:
+		if event.type == pgc.QUIT: return True
+
+		if event.type == pgc.MOUSEBUTTONDOWN and event.button == 1:
+			if app.selected is None:
+				for element in app.guiobjects:
+					if element.pgRect.collidepoint(mouse):
+						app.selected = element.generate(app)
+						app.selected.img = app.selected.dragimg
+						offsets = [mouse[0]-element.x, mouse[1]-element.y]
+						holding_active = True
+						return 
+
+			undermouse = None # tower
 			for tower in app.towers:
-				if tower.pgRect.collidepoint(mousepos):
+				if tower.pgRect.collidepoint(mouse):
 					undermouse = tower
-					break
 
-			if undermouse is None:
-				for obj in app.guiobjects:
-					if obj.pgRect.collidepoint(mousepos):
-						undermouse = obj
-						break
+			if undermouse is not None:
+				if holding_active and app.selected is not None:
+					app.selected.x = mouse[0]
+					app.selected.y = mouse[1]
+					app.selected.update()
+					app.selected.img = app.selected.stdimg
+					app.selected = None
+					holding_active = False
+					return 
 
-			if (event.type == pgc.MOUSEBUTTONDOWN and event.button == 1) and type(undermouse) == _elements.TowerGrab:
-				app.selected = undermouse.generate(app)
-				print("got grab")
-				if app.selected is not None:
+				elif not holding_active and app.selected is None:
+					app.selected = undermouse
 					app.selected.img = app.selected.dragimg
-					app.selected.dragged = True
-					MovingObj.objapp = app.selected
-					MovingObj.offsets = [int(mousepos[0]-app.selected.x), int(mousepos[1]-app.selected.y)]
+					offsets = [mouse[0]-undermouse.x, mouse[1]-undermouse.y]
+					holding_active = True
+					return 
+
+		elif event.type == pgc.MOUSEBUTTONDOWN and event.button == 3:
+			for tower in app.towers:
+				if tower.pgRect.collidepoint(mouse):
+					tower._delete(app)
 					return
 
-			elif event.type == pgc.MOUSEBUTTONDOWN and event.button == 3:
-					if tower.pgRect.collidepoint(mousepos):
-						tower._delete(app)
-
-			elif event.type == pgc.MOUSEBUTTONDOWN and event.button == 1:
-				app.selected = undermouse
-				if app.selected is not None:
-					app.selected.img = app.selected.dragimg
-					app.selected.dragged = True
-					MovingObj.objapp = app.selected
-					MovingObj.offsets = [int(mousepos[0]-app.selected.x), int(mousepos[1]-app.selected.y)]
-					return
-
-	if app.selected is not None:
-		for event in app.events:
-			if event.type == pgc.MOUSEBUTTONUP and event.button == 1:
-				app.selected.img = app.selected.stdimg
+		else:
+			if holding_active: 
+				app.selected.x = mouse[0]
+				app.selected.y = mouse[1]
 				app.selected.update()
-				app.selected = None
-				MovingObj.objapp = None
-				return
-
-		MovingObj.update()
-
-	else:
-		pass
-
-
-
-class MovingObj:
-	objapp = None
-	offsets = []
-
-	def update():
-		if MovingObj.objapp is not None:
-			mousepos = get_pos()
-			MovingObj.objapp.x = mousepos[0] - MovingObj.offsets[0]
-			MovingObj.objapp.y = mousepos[1] - MovingObj.offsets[1] 
-			
