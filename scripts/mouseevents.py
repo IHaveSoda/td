@@ -1,17 +1,25 @@
 from pygame import constants as pgc
 from pygame.mouse import get_pos
+from scripts.saveinteraction import save_data
 import TDObjects
-from gui import _elements
 
 offsets = []
 holding_active = False
 
-def check(app):
+def check_keyboard_input(app, event):
+	if event.type == pgc.KEYDOWN:
+		if event.key == pgc.K_F12:
+			save_data(app)
+			print("Saved game!")
+
+def check_mouse_click(app):
 	global offsets
 	global holding_active
 
 	mouse = get_pos()
 	for event in app.events:
+		check_keyboard_input(app, event)
+
 		if event.type == pgc.QUIT: return True
 
 		if event.type == pgc.MOUSEBUTTONDOWN and event.button == 1:
@@ -31,8 +39,8 @@ def check(app):
 
 			if undermouse is not None:
 				if holding_active and app.selected is not None:
-					app.selected.x = mouse[0]
-					app.selected.y = mouse[1]
+					app.selected.x = mouse[0] - offsets[0]
+					app.selected.y = mouse[1] - offsets[1]
 					app.selected.update()
 					app.selected.img = app.selected.stdimg
 					app.selected = None
@@ -54,6 +62,6 @@ def check(app):
 
 		else:
 			if holding_active: 
-				app.selected.x = mouse[0]
-				app.selected.y = mouse[1]
+				app.selected.x = mouse[0] - offsets[0]
+				app.selected.y = mouse[1] - offsets[1]
 				app.selected.update()
